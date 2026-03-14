@@ -6,13 +6,17 @@ import { Progress } from "@/components/ui/progress"
 import { Flame, Calendar, BrainCircuit, CheckCircle2, ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/firebase"
 
 export default function DashboardPage() {
+  const { user } = useUser()
+  const firstName = user?.displayName?.split(" ")[0] || "Student"
+
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Welcome back, Alex! 👋</h1>
+          <h1 className="text-3xl font-headline font-bold">Welcome back, {firstName}! 👋</h1>
           <p className="text-muted-foreground">You have 3 study sessions scheduled for today.</p>
         </div>
         <Link href="/planner">

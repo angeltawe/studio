@@ -1,9 +1,31 @@
+"use client"
+
 import Link from "next/link"
-import { ArrowRight, BrainCircuit, Calendar, FileText, Flame, Sparkles } from "lucide-react"
+import { ArrowRight, BrainCircuit, Calendar, FileText, Flame, Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
+import { useUser, useAuth, initiateAnonymousSignIn } from "@/firebase"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function LandingPage() {
+  const { user, isUserLoading } = useUser()
+  const auth = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard")
+    }
+  }, [user, router])
+
+  const handleGetStarted = () => {
+    if (!user) {
+      initiateAnonymousSignIn(auth)
+    } else {
+      router.push("/dashboard")
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
@@ -12,9 +34,14 @@ export default function LandingPage() {
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-headline font-bold text-xl shadow-lg shadow-primary/20">S</div>
           <span className="font-headline font-bold text-2xl tracking-tight text-primary">Schedular</span>
         </div>
-        <Link href="/dashboard">
-          <Button variant="ghost" className="font-medium">Sign In</Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          className="font-medium" 
+          onClick={handleGetStarted}
+          disabled={isUserLoading}
+        >
+          {isUserLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (user ? "Go to Dashboard" : "Sign In")}
+        </Button>
       </header>
 
       {/* Hero Section */}
@@ -38,12 +65,15 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/dashboard">
-              <Button size="lg" className="h-14 px-8 text-lg rounded-2xl shadow-xl shadow-primary/20 group">
-                Get Started
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              className="h-14 px-8 text-lg rounded-2xl shadow-xl shadow-primary/20 group"
+              onClick={handleGetStarted}
+              disabled={isUserLoading}
+            >
+              {isUserLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Get Started"}
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
             <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-2xl bg-white/50 backdrop-blur-sm">
               Watch Demo
             </Button>

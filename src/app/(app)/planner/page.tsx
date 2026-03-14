@@ -11,10 +11,14 @@ import { generatePersonalizedStudyPlan } from "@/ai/flows/generate-personalized-
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { useUser, useFirestore, addDocumentNonBlocking } from "@/firebase"
+import { collection, serverTimestamp } from "firebase/firestore"
 
 type Step = "UPLOAD" | "RANK" | "PREFERENCES" | "GENERATING" | "FINISHED"
 
 export default function PlannerPage() {
+  const { user } = useUser()
+  const db = useFirestore()
   const [step, setStep] = useState<Step>("UPLOAD")
   const [isLoading, setIsLoading] = useState(false)
   const [timetableData, setTimetableData] = useState<any>(null)
@@ -35,8 +39,8 @@ export default function PlannerPage() {
         setTimetableData(result)
         
         const subjects = new Set<string>()
-        result.timetable.forEach(day => {
-          day.classes.forEach(c => subjects.add(c.subject))
+        result.timetable.forEach((day: any) => {
+          day.classes.forEach((c: any) => subjects.add(c.subject))
         })
         setRankings(Array.from(subjects).map(s => ({ subject: s, difficulty: "Medium" })))
         
@@ -54,6 +58,7 @@ export default function PlannerPage() {
   }
 
   const handleGenerate = async () => {
+    if (!user) return
     setStep("GENERATING")
     try {
       const schoolTimetable = timetableData.timetable.flatMap((day: any) => 
@@ -73,10 +78,43 @@ export default function PlannerPage() {
         { day: "Friday", startTime: "17:00", endTime: "20:00" },
       ]
 
-      await generatePersonalizedStudyPlan({
+      const planResult = await generatePersonalizedStudyPlan({
         schoolTimetable,
         preferredStudyTimes,
         subjectDifficultyRankings: rankings as any
+      })
+
+      // Save to Firestore (Non-blocking as per guidelines)
+      const plansRef = collection(db, "users", user.uid, "personalizedStudyPlans")
+      const planData = {
+        userId: user.uid,
+        name: "My New Study Plan",
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        generatedDate: new Date().toISOString(),
+        lastModifiedDate: new Date().toISOString(),
+        isActive: true,
+        createdAt: serverTimestamp()
+      }
+
+      addDocumentNonBlocking(plansRef, planData).then(docRef => {
+        if (docRef) {
+          const blocksRef = collection(db, "users", user.uid, "personalizedStudyPlans", docRef.id, "studyBlocks")
+          planResult.forEach(session => {
+            addDocumentNonBlocking(blocksRef, {
+              ownerUserId: user.uid,
+              personalizedStudyPlanId: docRef.id,
+              subjectId: "subject-id-placeholder", // In a real app we'd map this
+              title: `${session.subject} Session`,
+              description: session.notes || "",
+              scheduledDate: new Date().toISOString().split('T')[0], // Placeholder
+              startTime: session.startTime,
+              endTime: session.endTime,
+              isCompleted: false,
+              createdAt: serverTimestamp()
+            })
+          })
+        }
       })
 
       setStep("FINISHED")
