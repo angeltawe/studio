@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Flame, Calendar, BrainCircuit, CheckCircle2, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   return (
@@ -141,7 +142,7 @@ function SessionItem({ subject, time, type, difficulty }: { subject: string, tim
     "Medium": "bg-blue-100 text-blue-700",
     "Hard": "bg-orange-100 text-orange-700",
     "Very Hard": "bg-red-100 text-red-700"
-  }[difficulty]
+  }[difficulty as keyof typeof difficultyColor] || "bg-muted text-muted-foreground"
 
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-border hover:border-primary/20 transition-all group">
