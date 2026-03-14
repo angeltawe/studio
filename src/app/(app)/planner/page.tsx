@@ -1,0 +1,275 @@
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
+import { FileUp, Loader2, Sparkles, Plus, Trash2, CheckCircle2 } from "lucide-react"
+import { extractSchoolTimetable } from "@/ai/flows/extract-school-timetable"
+import { generatePersonalizedStudyPlan } from "@/ai/flows/generate-personalized-study-plan"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
+
+type Step = "UPLOAD" | "RANK" | "PREFERENCES" | "GENERATING" | "FINISHED"
+
+export default function PlannerPage() {
+  const [step, setStep] = useState<Step>("UPLOAD")
+  const [isLoading, setIsLoading] = useState(false)
+  const [timetableData, setTimetableData] = useState<any>(null)
+  const [rankings, setRankings] = useState<{ subject: string, difficulty: string }[]>([])
+  const { toast } = useToast()
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsLoading(true)
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = async () => {
+        const base64 = reader.result as string
+        const result = await extractSchoolTimetable({ documentDataUri: base64 })
+        setTimetableData(result)
+        
+        // Extract unique subjects for ranking
+        const subjects = new Set<string>()
+        result.timetable.forEach(day => {
+          day.classes.forEach(c => subjects.add(c.subject))
+        })
+        setRankings(Array.from(subjects).map(s => ({ subject: s, difficulty: "Medium" })))
+        
+        setStep("RANK")
+        setIsLoading(false)
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to parse timetable. Please try a clearer image."
+      })
+      setIsLoading(false)
+    }
+  }
+
+  const handleGenerate = async () => {
+    setStep("GENERATING")
+    try {
+      // Prep data for flow
+      const schoolTimetable = timetableData.timetable.flatMap((day: any) => 
+        day.classes.map((c: any) => ({
+          day: day.dayOfWeek,
+          subject: c.subject,
+          startTime: c.startTime,
+          endTime: c.endTime
+        }))
+      )
+
+      const preferredStudyTimes = [
+        { day: "Monday", startTime: "17:00", endTime: "20:00" },
+        { day: "Tuesday", startTime: "17:00", endTime: "20:00" },
+        { day: "Wednesday", startTime: "17:00", endTime: "20:00" },
+        { day: "Thursday", startTime: "17:00", endTime: "20:00" },
+        { day: "Friday", startTime: "17:00", endTime: "20:00" },
+      ]
+
+      const result = await generatePersonalizedStudyPlan({
+        schoolTimetable,
+        preferredStudyTimes,
+        subjectDifficultyRankings: rankings as any
+      })
+
+      setStep("FINISHED")
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Generation Error",
+        description: "Something went wrong while generating your plan."
+      })
+      setStep("RANK")
+    }
+  }
+
+  return (
+    <div className="container max-w-4xl mx-auto p-4 md:p-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-headline font-bold">Study Planner Wizard</h1>
+          <p className="text-muted-foreground">Let's build your perfect study schedule.</p>
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map(s => (
+            <div 
+              key={s} 
+              className={cn(
+                "w-8 h-1.5 rounded-full transition-all duration-500",
+                (s === 1 && step === "UPLOAD") || (s === 2 && step === "RANK") || (s === 3 && step === "PREFERENCES") || (s === 4 && step === "FINISHED")
+                  ? "bg-primary w-12" 
+                  : "bg-muted"
+              )} 
+            />
+          ))}
+        </div>
+      </div>
+
+      <Card className="rounded-[2rem] shadow-xl shadow-primary/5 border-none bg-white min-h-[400px] flex flex-col">
+        <CardContent className="flex-1 p-8">
+          {step === "UPLOAD" && (
+            <div className="h-full flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95 duration-300">
+              <div className="w-24 h-24 rounded-3xl bg-primary/5 flex items-center justify-center text-primary">
+                <FileUp className="w-12 h-12" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl font-headline font-bold">Step 1: Upload Timetable</h3>
+                <p className="text-muted-foreground max-w-sm">
+                  Snap a clear photo of your school schedule. Our AI will extract all classes and times.
+                </p>
+              </div>
+              <div className="w-full max-w-xs">
+                <Label 
+                  htmlFor="timetable-upload" 
+                  className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-primary/20 rounded-3xl cursor-pointer hover:bg-primary/5 transition-colors"
+                >
+                  {isLoading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <span className="text-sm font-medium">Analyzing...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <FileUp className="w-8 h-8 text-primary mb-2" />
+                      <span className="text-sm font-medium">Select Image or PDF</span>
+                    </>
+                  )}
+                  <input id="timetable-upload" type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={isLoading} />
+                </Label>
+              </div>
+            </div>
+          )}
+
+          {step === "RANK" && (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <div className="space-y-1">
+                <h3 className="text-2xl font-headline font-bold">Step 2: Subject Difficulty</h3>
+                <p className="text-muted-foreground">Rank your subjects. AI will prioritize study for harder subjects.</p>
+              </div>
+              <div className="grid gap-4">
+                {rankings.map((r, i) => (
+                  <div key={r.subject} className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl">
+                    <span className="font-bold">{r.subject}</span>
+                    <select 
+                      className="bg-white border border-border rounded-xl px-3 py-1.5 text-sm"
+                      value={r.difficulty}
+                      onChange={(e) => {
+                        const newRankings = [...rankings]
+                        newRankings[i].difficulty = e.target.value
+                        setRankings(newRankings)
+                      }}
+                    >
+                      <option>Very Easy</option>
+                      <option>Easy</option>
+                      <option>Medium</option>
+                      <option>Hard</option>
+                      <option>Very Hard</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4 flex justify-between">
+                <Button variant="ghost" onClick={() => setStep("UPLOAD")}>Back</Button>
+                <Button onClick={() => setStep("PREFERENCES")} className="rounded-xl px-8">Next Step</Button>
+              </div>
+            </div>
+          )}
+
+          {step === "PREFERENCES" && (
+            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <div className="space-y-1">
+                <h3 className="text-2xl font-headline font-bold">Step 3: Study Preferences</h3>
+                <p className="text-muted-foreground">When do you usually have free time for studying?</p>
+              </div>
+              <div className="space-y-6">
+                <div className="p-6 bg-primary/5 rounded-3xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-bold">Weekday Availability</Label>
+                    <span className="text-xs text-primary font-bold">17:00 - 21:00</span>
+                  </div>
+                  <Slider defaultValue={[17, 21]} max={24} step={1} className="py-4" />
+                </div>
+                <div className="p-6 bg-primary/5 rounded-3xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-bold">Weekend Intensity</Label>
+                    <span className="text-xs text-primary font-bold">High (3 hours/day)</span>
+                  </div>
+                  <Slider defaultValue={[75]} max={100} className="py-4" />
+                </div>
+              </div>
+              <div className="pt-4 flex justify-between">
+                <Button variant="ghost" onClick={() => setStep("RANK")}>Back</Button>
+                <Button onClick={handleGenerate} className="rounded-xl px-8 gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Generate Plan
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "GENERATING" && (
+            <div className="h-full flex flex-col items-center justify-center space-y-8 py-20 animate-pulse">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                <BrainCircuit className="w-10 h-10 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl font-headline font-bold">Synthesizing Schedule...</h3>
+                <p className="text-muted-foreground">Optimizing your time using neural algorithms.</p>
+              </div>
+            </div>
+          )}
+
+          {step === "FINISHED" && (
+            <div className="h-full flex flex-col items-center justify-center space-y-8 animate-in zoom-in-95 duration-500">
+              <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
+                <CheckCircle2 className="w-16 h-16" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl font-headline font-bold">Success! Plan Ready.</h3>
+                <p className="text-muted-foreground">Your personalized study plan has been added to your calendar.</p>
+              </div>
+              <Link href="/timetable">
+                <Button size="lg" className="rounded-2xl px-12 h-14 text-lg">
+                  View My Timetable
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function BrainCircuit({ className }: { className?: string }) {
+  return (
+    <svg 
+      className={className}
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0 .94 4.82 2.5 2.5 0 0 0 0 4.28 2.5 2.5 0 0 0-.94 4.82 2.5 2.5 0 0 0 1.98 3 2.5 2.5 0 0 0 4.96-.46" />
+      <path d="M12 4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1-.94 4.82 2.5 2.5 0 0 1 0 4.28 2.5 2.5 0 0 1 .94 4.82 2.5 2.5 0 0 1-1.98 3 2.5 2.5 0 0 1-4.96-.46" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M12 14v4" />
+      <path d="M12 6v4" />
+      <path d="M8 12H4" />
+      <path d="M20 12h-4" />
+    </svg>
+  )
+}

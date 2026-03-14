@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-illustration",
+      "description": "Abstract focused student with books and neural networks",
+      "imageUrl": "https://picsum.photos/seed/sched-hero/1200/800",
+      "imageHint": "study education"
+    },
+    {
+      "id": "app-feature-quiz",
+      "description": "Quiz interaction concept",
+      "imageUrl": "https://picsum.photos/seed/sched-quiz/600/400",
+      "imageHint": "quiz learning"
+    },
+    {
+      "id": "app-feature-planner",
+      "description": "Calendar and planning icons",
+      "imageUrl": "https://picsum.photos/seed/sched-plan/600/400",
+      "imageHint": "calendar schedule"
+    }
+  ]
 }
