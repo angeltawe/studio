@@ -1,16 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { FileUp, Loader2, Sparkles, Plus, Trash2, CheckCircle2 } from "lucide-react"
+import { FileUp, Loader2, Sparkles, CheckCircle2, BrainCircuit } from "lucide-react"
 import { extractSchoolTimetable } from "@/ai/flows/extract-school-timetable"
 import { generatePersonalizedStudyPlan } from "@/ai/flows/generate-personalized-study-plan"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 type Step = "UPLOAD" | "RANK" | "PREFERENCES" | "GENERATING" | "FINISHED"
 
@@ -27,7 +27,6 @@ export default function PlannerPage() {
 
     setIsLoading(true)
     try {
-      // Convert to base64
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = async () => {
@@ -35,7 +34,6 @@ export default function PlannerPage() {
         const result = await extractSchoolTimetable({ documentDataUri: base64 })
         setTimetableData(result)
         
-        // Extract unique subjects for ranking
         const subjects = new Set<string>()
         result.timetable.forEach(day => {
           day.classes.forEach(c => subjects.add(c.subject))
@@ -58,7 +56,6 @@ export default function PlannerPage() {
   const handleGenerate = async () => {
     setStep("GENERATING")
     try {
-      // Prep data for flow
       const schoolTimetable = timetableData.timetable.flatMap((day: any) => 
         day.classes.map((c: any) => ({
           day: day.dayOfWeek,
@@ -76,7 +73,7 @@ export default function PlannerPage() {
         { day: "Friday", startTime: "17:00", endTime: "20:00" },
       ]
 
-      const result = await generatePersonalizedStudyPlan({
+      await generatePersonalizedStudyPlan({
         schoolTimetable,
         preferredStudyTimes,
         subjectDifficultyRankings: rankings as any
@@ -249,27 +246,5 @@ export default function PlannerPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function BrainCircuit({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0 .94 4.82 2.5 2.5 0 0 0 0 4.28 2.5 2.5 0 0 0-.94 4.82 2.5 2.5 0 0 0 1.98 3 2.5 2.5 0 0 0 4.96-.46" />
-      <path d="M12 4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1-.94 4.82 2.5 2.5 0 0 1 0 4.28 2.5 2.5 0 0 1 .94 4.82 2.5 2.5 0 0 1-1.98 3 2.5 2.5 0 0 1-4.96-.46" />
-      <circle cx="12" cy="12" r="2" />
-      <path d="M12 14v4" />
-      <path d="M12 6v4" />
-      <path d="M8 12H4" />
-      <path d="M20 12h-4" />
-    </svg>
   )
 }

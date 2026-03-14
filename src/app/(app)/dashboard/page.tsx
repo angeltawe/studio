@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Flame, Calendar, BrainCircuit, CheckCircle2, ArrowRight } from "lucide-react"
+import { Flame, Calendar, BrainCircuit, CheckCircle2, ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -125,8 +125,10 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <Button variant="link" className="p-0 h-auto text-primary font-bold group">
-                Update Schedule <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <Button variant="link" className="p-0 h-auto text-primary font-bold group" asChild>
+                <Link href="/planner">
+                  Update Schedule <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
             </div>
           </Card>
@@ -159,25 +161,5 @@ function SessionItem({ subject, time, type, difficulty }: { subject: string, tim
         {difficulty}
       </span>
     </div>
-  )
-}
-
-function Sparkles({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-      <path d="M5 3v4" />
-      <path d="M19 17v4" />
-      <path d="M3 5h4" />
-      <path d="M17 19h4" />
-    </svg>
   )
 }
