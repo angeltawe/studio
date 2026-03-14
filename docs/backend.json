@@ -1,0 +1,606 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Schedular application. This entity stores basic user information, assuming an external system handles authentication details like passwords and session management.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for identification and communication.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user's information was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Subject": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subject",
+      "type": "object",
+      "description": "Represents a distinct academic subject or course that appears in school timetables, personalized study plans, and quizzes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Subject entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the subject, e.g., 'Mathematics', 'World History'."
+        },
+        "code": {
+          "type": "string",
+          "description": "An optional shorthand code or identifier for the subject, e.g., 'MATH101', 'HIST202'."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "UserPreference": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserPreference",
+      "type": "object",
+      "description": "Stores user-specific preferences and settings relevant to study planning and AI generation, such as subject difficulty rankings and preferred study times.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserPreference entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User to whom these preferences belong. (Relationship: User 1:1 UserPreference)"
+        },
+        "subjectDifficultyRatings": {
+          "type": "array",
+          "description": "An array of objects, each defining a user's perceived difficulty rating for a specific subject. This helps the AI personalize study plans.",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "preferredStudyStartTime": {
+          "type": "string",
+          "description": "The user's preferred earliest time to begin study sessions, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "preferredStudyEndTime": {
+          "type": "string",
+          "description": "The user's preferred latest time to end study sessions, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "preferredStudyDays": {
+          "type": "array",
+          "description": "An array of strings indicating the days of the week (e.g., 'MONDAY', 'TUESDAY') when the user prefers to study.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "subjectDifficultyRatings",
+        "preferredStudyStartTime",
+        "preferredStudyEndTime",
+        "preferredStudyDays"
+      ]
+    },
+    "SchoolTimetable": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SchoolTimetable",
+      "type": "object",
+      "description": "Represents a digitized school timetable, which has been extracted and processed by the AI parser from an uploaded image or document.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SchoolTimetable entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who uploaded and owns this timetable. (Relationship: User 1:N SchoolTimetable)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A user-friendly name for the timetable, e.g., 'Fall 2024 Semester Timetable'."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional, more detailed description of the timetable's period or purpose."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "The URL to the original image file that was uploaded for parsing, if applicable.",
+          "format": "uri"
+        },
+        "documentUrl": {
+          "type": "string",
+          "description": "The URL to the original document file that was uploaded for parsing, if applicable.",
+          "format": "uri"
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Timestamp indicating when the original timetable file was uploaded.",
+          "format": "date-time"
+        },
+        "parsedDate": {
+          "type": "string",
+          "description": "Timestamp indicating when the timetable was successfully parsed and digitized by the AI.",
+          "format": "date-time"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "A boolean flag indicating if this is the currently active school timetable being used for planning."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "uploadDate",
+        "parsedDate",
+        "isActive"
+      ]
+    },
+    "SchoolTimetableEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SchoolTimetableEntry",
+      "type": "object",
+      "description": "Represents a single class, lecture, or scheduled event extracted from a school timetable.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SchoolTimetableEntry entity."
+        },
+        "schoolTimetableId": {
+          "type": "string",
+          "description": "Reference to the SchoolTimetable this entry is a part of. (Relationship: SchoolTimetable 1:N SchoolTimetableEntry)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to the Subject associated with this class entry. (Relationship: Subject 1:N SchoolTimetableEntry)"
+        },
+        "dayOfWeek": {
+          "type": "string",
+          "description": "The day of the week on which this class is scheduled (e.g., 'MONDAY', 'WEDNESDAY')."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The scheduled start time of the class, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The scheduled end time of the class, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical or virtual location where the class takes place."
+        }
+      },
+      "required": [
+        "id",
+        "schoolTimetableId",
+        "subjectId",
+        "dayOfWeek",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "PersonalizedStudyPlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PersonalizedStudyPlan",
+      "type": "object",
+      "description": "Represents a customized study schedule generated by the AI, tailored to a user's school timetable, preferences, and available study times.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PersonalizedStudyPlan entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this study plan. (Relationship: User 1:N PersonalizedStudyPlan)"
+        },
+        "schoolTimetableId": {
+          "type": "string",
+          "description": "Reference to the SchoolTimetable that served as the base for generating this personalized plan. (Relationship: SchoolTimetable 1:N PersonalizedStudyPlan)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A descriptive name for the personalized study plan, e.g., 'Final Exam Prep Schedule'."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional, more detailed description of the study plan's specific goals or period."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The calendar start date of this personalized study plan, in 'YYYY-MM-DD' format.",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The calendar end date of this personalized study plan, in 'YYYY-MM-DD' format.",
+          "format": "date"
+        },
+        "generatedDate": {
+          "type": "string",
+          "description": "Timestamp indicating when this study plan was initially generated by the AI.",
+          "format": "date-time"
+        },
+        "lastModifiedDate": {
+          "type": "string",
+          "description": "Timestamp indicating when this study plan was last modified, either by AI regeneration or user adjustments.",
+          "format": "date-time"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "A boolean flag indicating if this is the user's currently active personalized study plan."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "schoolTimetableId",
+        "name",
+        "startDate",
+        "endDate",
+        "generatedDate",
+        "lastModifiedDate",
+        "isActive"
+      ]
+    },
+    "StudyBlock": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudyBlock",
+      "type": "object",
+      "description": "Represents an individual scheduled study session or task within a Personalized Study Plan. These blocks can be marked as complete for streak tracking.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudyBlock entity."
+        },
+        "personalizedStudyPlanId": {
+          "type": "string",
+          "description": "Reference to the PersonalizedStudyPlan this study block belongs to. (Relationship: PersonalizedStudyPlan 1:N StudyBlock)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to the Subject that is to be studied during this block. (Relationship: Subject 1:N StudyBlock)"
+        },
+        "title": {
+          "type": "string",
+          "description": "A concise title for the study block, e.g., 'Math Chapter 3 Review'."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed instructions or topics to cover within this study block."
+        },
+        "scheduledDate": {
+          "type": "string",
+          "description": "The specific calendar date for which this study block is scheduled, in 'YYYY-MM-DD' format.",
+          "format": "date"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The scheduled start time of the study block, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The scheduled end time of the study block, in 'HH:MM:SS' format.",
+          "format": "time"
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "A boolean flag indicating whether the user has marked this study block as completed."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the study block was marked as completed. This field is null if not completed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "personalizedStudyPlanId",
+        "subjectId",
+        "title",
+        "scheduledDate",
+        "startTime",
+        "endTime",
+        "isCompleted"
+      ]
+    },
+    "Quiz": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quiz",
+      "type": "object",
+      "description": "Represents an AI-generated quiz, consisting of multiple questions on a particular subject or topic, used for reinforcing learning.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quiz entity."
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to the primary Subject that this quiz covers. (Relationship: Subject 1:N Quiz)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the quiz, e.g., 'Introduction to Algebra Quiz'."
+        },
+        "topic": {
+          "type": "string",
+          "description": "A more specific topic or sub-area within the subject that the quiz focuses on, e.g., 'Linear Equations'."
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "The difficulty level of the quiz (e.g., 'EASY', 'MEDIUM', 'HARD')."
+        },
+        "generatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this quiz was generated by the AI.",
+          "format": "date-time"
+        },
+        "requestedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who initiated the generation of this quiz. (Relationship: User 1:N Quiz)"
+        }
+      },
+      "required": [
+        "id",
+        "subjectId",
+        "title",
+        "topic",
+        "difficulty",
+        "generatedAt",
+        "requestedByUserId"
+      ]
+    },
+    "QuizQuestion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizQuestion",
+      "type": "object",
+      "description": "Represents a single question within an AI-generated quiz, including its text, type, options, and correct answer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QuizQuestion entity."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "Reference to the Quiz this question belongs to. (Relationship: Quiz 1:N QuizQuestion)"
+        },
+        "questionText": {
+          "type": "string",
+          "description": "The full text of the quiz question."
+        },
+        "questionType": {
+          "type": "string",
+          "description": "The format of the question, such as 'MULTIPLE_CHOICE', 'TRUE_FALSE', or 'SHORT_ANSWER'."
+        },
+        "options": {
+          "type": "array",
+          "description": "An array of possible answer choices, primarily for 'MULTIPLE_CHOICE' questions.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "correctAnswer": {
+          "type": "string",
+          "description": "The correct answer to the question. For multiple choice, this should match one of the 'options' values."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "An optional explanation or rationale for the correct answer, displayed after the user attempts the question."
+        }
+      },
+      "required": [
+        "id",
+        "quizId",
+        "questionText",
+        "questionType",
+        "correctAnswer"
+      ]
+    },
+    "QuizAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizAttempt",
+      "type": "object",
+      "description": "Records a user's complete attempt at a specific quiz, including performance metrics and their responses to each question.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QuizAttempt entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who made this quiz attempt. (Relationship: User 1:N QuizAttempt)"
+        },
+        "quizId": {
+          "type": "string",
+          "description": "Reference to the Quiz that was attempted. (Relationship: Quiz 1:N QuizAttempt)"
+        },
+        "attemptedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the quiz attempt was completed.",
+          "format": "date-time"
+        },
+        "scorePercentage": {
+          "type": "number",
+          "description": "The user's score on this quiz attempt, expressed as a decimal percentage (e.g., 0.85 for 85%)."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "The total time, in seconds, the user took to complete the quiz attempt."
+        },
+        "userAnswers": {
+          "type": "array",
+          "description": "An array of objects, each detailing the user's answer to a specific question within this quiz attempt.",
+          "items": {
+            "type": "boolean"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "quizId",
+        "attemptedAt",
+        "scorePercentage",
+        "durationSeconds",
+        "userAnswers"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles. Authorization for read/write is restricted to the user whose `uid` matches `{userId}`."
+        }
+      },
+      {
+        "path": "/subjects/{subjectId}",
+        "definition": {
+          "entityName": "Subject",
+          "schema": {
+            "$ref": "#/backend/entities/Subject"
+          },
+          "description": "Stores globally available academic subjects. These documents are typically read-only for all authenticated users. Administrative privileges would manage creation and updates."
+        }
+      },
+      {
+        "path": "/users/{userId}/preferences/{userPreferenceId}",
+        "definition": {
+          "entityName": "UserPreference",
+          "schema": {
+            "$ref": "#/backend/entities/UserPreference"
+          },
+          "description": "Stores user-specific preferences. The document ID (`userPreferenceId`) is expected to match the `userId` from the parent path to enforce a 1:1 relationship per user. Authorization is based on path-based ownership."
+        }
+      },
+      {
+        "path": "/users/{userId}/schoolTimetables/{schoolTimetableId}",
+        "definition": {
+          "entityName": "SchoolTimetable",
+          "schema": {
+            "$ref": "#/backend/entities/SchoolTimetable"
+          },
+          "description": "Stores digitized school timetables uploaded and owned by specific users. Authorization is restricted to the user matching `{userId}` in the path."
+        }
+      },
+      {
+        "path": "/users/{userId}/schoolTimetables/{schoolTimetableId}/entries/{schoolTimetableEntryId}",
+        "definition": {
+          "entityName": "SchoolTimetableEntry",
+          "schema": {
+            "$ref": "#/backend/entities/SchoolTimetableEntry"
+          },
+          "description": "Represents individual class entries within a specific school timetable. Each document *must* include a denormalized `ownerUserId` field (matching `{userId}` from the grandparent path) to ensure authorization independence without requiring `get()` operations on parent documents."
+        }
+      },
+      {
+        "path": "/users/{userId}/personalizedStudyPlans/{personalizedStudyPlanId}",
+        "definition": {
+          "entityName": "PersonalizedStudyPlan",
+          "schema": {
+            "$ref": "#/backend/entities/PersonalizedStudyPlan"
+          },
+          "description": "Stores AI-generated personalized study plans, each owned by a specific user. Authorization is restricted to the user matching `{userId}` in the path."
+        }
+      },
+      {
+        "path": "/users/{userId}/personalizedStudyPlans/{personalizedStudyPlanId}/studyBlocks/{studyBlockId}",
+        "definition": {
+          "entityName": "StudyBlock",
+          "schema": {
+            "$ref": "#/backend/entities/StudyBlock"
+          },
+          "description": "Represents individual study sessions or tasks within a personalized study plan. Each document *must* include a denormalized `ownerUserId` field (matching `{userId}` from the grandparent path) for authorization independence, enabling atomic security rule checks."
+        }
+      },
+      {
+        "path": "/users/{userId}/quizzes/{quizId}",
+        "definition": {
+          "entityName": "Quiz",
+          "schema": {
+            "$ref": "#/backend/entities/Quiz"
+          },
+          "description": "Stores AI-generated quizzes requested by a specific user. The `requestedByUserId` field in the document is expected to match `{userId}` from the path, ensuring path-based ownership."
+        }
+      },
+      {
+        "path": "/users/{userId}/quizzes/{quizId}/questions/{quizQuestionId}",
+        "definition": {
+          "entityName": "QuizQuestion",
+          "schema": {
+            "$ref": "#/backend/entities/QuizQuestion"
+          },
+          "description": "Represents individual questions belonging to a quiz. Each document *must* include a denormalized `ownerUserId` field (matching `{userId}` from the grandparent path) for authorization independence, enabling atomic security rule checks."
+        }
+      },
+      {
+        "path": "/users/{userId}/quizAttempts/{quizAttemptId}",
+        "definition": {
+          "entityName": "QuizAttempt",
+          "schema": {
+            "$ref": "#/backend/entities/QuizAttempt"
+          },
+          "description": "Records a user's attempt at a quiz. Authorization is restricted to the user matching `{userId}` in the path."
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/AdminRole"
+          },
+          "description": "This collection manages admin roles. The existence of a document for a specific `{userId}` in this collection grants admin privileges to that user (Database Authorization Control - Existence over Content). Documents can be empty."
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure for the Schedular application is designed to adhere strictly to the core design principles of Authorization Independence, Clarity of Intent, DBAC, QAPs, and Invariants. This ensures a secure, scalable, and easily debuggable backend.\n\n**Authorization Independence (CRITICAL - Mandate A):**\nThis principle is paramount and achieved through systematic denormalization. For all user-specific data nested in subcollections (e.g., SchoolTimetableEntry, StudyBlock, QuizQuestion), the `ownerUserId` (which corresponds to the top-level `{userId}` in the path) is explicitly denormalized and stored within each document. This eliminates the need for `get()` calls in Firestore security rules to check parent documents for ownership, thus enabling atomic operations and greatly simplifying rule logic. For example, to verify ownership of a StudyBlock, the rule only needs to check `request.auth.uid == resource.data.ownerUserId`, without needing to retrieve the PersonalizedStudyPlan or User document.\n\nFor top-level user-owned collections (e.g., /users/{userId}/preferences, /users/{userId}/schoolTimetables), the `userId` is both part of the document path and explicitly present as a field (e.g., `userId` or `requestedByUserId`) within the document. This direct correspondence ensures that ownership can be verified solely by comparing `request.auth.uid` with the `userId` in the path and/or the document's `userId` field, maintaining authorization independence.\n\n**Clarity of Intent (Debuggability):**\nThe hierarchical path structure, such as /users/{userId}/personalizedStudyPlans/{planId}/studyBlocks/{blockId}, explicitly reflects data ownership and relationships. This makes authorization intent clear: data under /users/{userId}/ is owned by `userId`. Wildcard names like `{userId}`, `{schoolTimetableId}`, and `{quizId}` are descriptive and immediately convey the purpose of the path segment, aiding in rule writing and debugging.\n\n**DBAC (No Custom Claims - Mandate C):**\nGlobal roles, such as 'admin', are implemented using dedicated top-level collections like /roles_admin/{userId}. The authorization check relies on the *existence* of a document at this path for the given `userId`, rather than inspecting its content or relying on custom claims. This keeps authorization logic solely within Firestore rules and the database.\n\n**QAPs (Rules are not Filters - Mandate B & C):**\nThe structural segregation and path-based ownership naturally support Query Authorization Patterns (QAPs). When a user queries /users/{userId}/schoolTimetables, the security rules can directly compare the requested `userId` in the path with `request.auth.uid`. This means that `list` operations are implicitly filtered by the security rules because any request for /users/{otherUserId}/schoolTimetables by `request.auth.uid` that does not match `otherUserId` will be denied. This ensures that clients only receive data they are explicitly authorized to access, preventing data leakage and minimizing client-side filtering logic.\n\nFor global, read-only collections like /subjects, the QAP is simply to allow authenticated reads, meaning any authenticated user can query the entire collection, which is also a secure and intended behavior.\n\n**Structural Segregation (Homogeneous Security Posture - Mandate B):**\nData is segregated based on its security requirements. For example, /subjects is a global, shared collection with read-only access for all authenticated users, while all user-specific data is contained within /users/{userId}/... collections, ensuring private ownership. This prevents mixing data with different access needs in the same collection, simplifying security rules immensely.\n\n**Invariants:**\nThe structure supports the integrity of ownership (via `ownerUserId` and path matching), timestamps (`createdAt`, `updatedAt`, `generatedDate`, `parsedDate`), and denormalized data. Security rules can be written to enforce that fields like `ownerUserId` or `createdAt` are immutable after creation, or that `updatedAt` is always updated on modifications."
+  }
+}

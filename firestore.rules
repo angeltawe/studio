@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Schedular Application Security Rules
+     *
+     * Core Philosophy:
+     * This ruleset implements a strict user-ownership model. The security architecture is built
+     * on the principle of "Authorization Independence," where most documents contain the
+     * necessary fields (like 'ownerUserId') to authorize access without needing to perform
+     * expensive get() operations on parent documents.
+     *
+     * Data Structure:
+     * - /users/{userId}: Root profiles.
+     * - /users/{userId}/...: Private user data (Preferences, Timetables, Plans, Quizzes).
+     * - /subjects: Global, read-only academic subject data.
+     * - /roles_admin: Administrative control via document existence.
+     *
+     * Key Security Decisions:
+     * 1. Ownership: Users have full CRUD access to their own data tree.
+     * 2. Admin Roles: Privileged operations are restricted based on the existence of a
+     *    document in the /roles_admin collection.
+     * 3. Denormalization: Documents in deep subcollections include 'ownerUserId' to
+     *    ensure rules remain performant and atomic.
+     * 4. Relational Integrity: On creation and update, rules enforce that ownership
+     *    fields (userId, ownerUserId) correctly match the authenticated user and the path.
+     * 5. Prototyping Mode: Data types and schema shapes are not enforced, allowing for
+     *    rapid iteration while maintaining high authorization security.
+     */
+
+    // --- HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for user profile documents.
+     * @path /users/{userId}
+     * @allow (get, list, create, update) if the authenticated user's UID matches {userId}.
+     * @deny (delete) even for owners, or any access if UID does not match.
+     * @principle Ownership: Users manage their own profile; deletion is restricted.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == userId;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Globally available subjects, read-only for users, managed by admins.
+     * @path /subjects/{subjectId}
+     * @allow (get, list) for any signed-in user.
+     * @deny (write) for non-admin users.
+     * @principle Structural Segregation: Separates public-read data from user-private data.
+     */
+    match /subjects/{subjectId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description User preferences tied 1:1 to a user profile.
+     * @path /users/{userId}/preferences/{userPreferenceId}
+     * @allow (all) if user is owner and document ID matches userId.
+     * @deny (all) if document ID does not match path userId or requester is not owner.
+     * @principle Path-based ownership and document-path consistency.
+     */
+    match /users/{userId}/preferences/{userPreferenceId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && userPreferenceId == userId && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && userPreferenceId == userId && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description School timetables uploaded by users.
+     * @path /users/{userId}/schoolTimetables/{schoolTimetableId}
+     * @allow (all) if user is the owner defined in the path.
+     * @deny (write) if the internal userId field does not match the authenticated user.
+     * @principle Ownership: Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/schoolTimetables/{schoolTimetableId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Individual entries within a timetable.
+       * @path /users/{userId}/schoolTimetables/{schoolTimetableId}/entries/{entryId}
+       * @allow (all) if user is owner using denormalized 'ownerUserId'.
+       * @principle Authorization Independence: Uses denormalized field for atomic checks.
+       */
+      match /entries/{entryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description AI-generated study plans.
+     * @path /users/{userId}/personalizedStudyPlans/{planId}
+     * @allow (all) if user is owner.
+     * @principle Ownership: Enforces document ownership for writes.
+     */
+    match /users/{userId}/personalizedStudyPlans/{planId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Scheduled blocks within a study plan.
+       * @path /users/{userId}/personalizedStudyPlans/{planId}/studyBlocks/{blockId}
+       * @allow (all) if user is owner using denormalized 'ownerUserId'.
+       */
+      match /studyBlocks/{blockId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Quizzes requested by users.
+     * @path /users/{userId}/quizzes/{quizId}
+     * @allow (all) if user is owner.
+     * @principle Relational Integrity: Validates consistency between requester and path.
+     */
+    match /users/{userId}/quizzes/{quizId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.requestedByUserId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.requestedByUserId == userId;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Questions within a quiz.
+       * @path /users/{userId}/quizzes/{quizId}/questions/{questionId}
+       * @allow (all) if user is owner using denormalized 'ownerUserId'.
+       */
+      match /questions/{questionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.ownerUserId == userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Records of user attempts at quizzes.
+     * @path /users/{userId}/quizAttempts/{attemptId}
+     * @allow (all) if user is owner.
+     */
+    match /users/{userId}/quizAttempts/{attemptId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Administrative roles.
+     * @path /roles_admin/{userId}
+     * @allow (all) if the requester is already an admin.
+     * @principle DBAC: Authorization based on document existence.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isSignedIn();
+      allow list, create, update, delete: if isAdmin();
+    }
+  }
+}
