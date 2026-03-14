@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Clock, BookOpen, MapPin, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const mockSchedule = [
   { id: 1, subject: "Mathematics", time: "09:00 - 10:30", type: "School Class", room: "Room 402", color: "bg-blue-500" },
